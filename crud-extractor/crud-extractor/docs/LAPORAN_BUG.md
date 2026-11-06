@@ -63,4 +63,40 @@ test_kata_berawalan_keyword_tetap_ident
 memverifikasinya?
 ya, membantu.
 kami memferifikasi dengan pytest, jika hasil nya sudah memenuhi semua test berarti bener. seperti ketika AI keliru mengira `tests/test_tambahan.py` sudah punya import, kesalahan itu baru diketahui dari error pytest lalu kami perbaiki sendiri.
+
+
+## Bug 2: Komentar blok `/* ... */` belum didukung (TODO T3)
+
+**Ditemukan oleh:** Fatih · **Diperbaiki oleh:** Fatih
+
+**Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md
+(sebutkan bagiannya).
+Setiap file SQL yang memuat `/* ... */` langsung gagal di lexer sebelum
+parser sempat berjalan dengan menampilakn pesan `LexError: Baris L, kolom K: komentar blok belum didukung`. Karena hampir semua file SQL produksi memuat komentar blok sebagai dokumentasi, seluruh pipeline terhenti untuk file-file tersebut.
+
+**Reproduksi minimal.** SQL terpendek yang memicu bug:
+
+```sql
+/* dokumentasi */ SELECT 1;
+```
+
+**Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
+Karena kami belum mengimplementasikan TODO(T3). Stub di _scan_token() sengaja melempar LexError untuk setiap /*.
+
+Konsep penanganan komentar baris // di Crafting Interpreters Bab 4 4.6 ini belum diterapkan, konsep ketika scanner membaca /, scanner tidak langsung memutuskan "ini operator pembagian", tetapi melihat satu karakter selanjutnya untuk menentukan apakah ini operator atau komentar. Pola ini berlaku juga untuk /* ... */, deteksi dulu sampai akhir dan jangan panggil addToken (komentar tidak menghasilkan token).
+
+**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
+alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
+Kami mengubah file crud/lexer.py, method Lexer._scan_token(), cabang
+if ch == "/" and self._peek() == "*": Agar setelah mendeteksi "/*" masuk ke While loop memeriksa sampai EOF, sehingga komentar yang tidak ditutup melempar LexError di posisi /*
+
+**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus sesudahnya.
+tests/test_tambahan.py::test_komentar_blok_didukung, gagal sebelum
+perbaikan (melempar LexError), lulus sesudahnya. Ditambahkan juga coverage
+test_komentar_blok_lintas_baris untuk memastikan line tetap akurat untuk
+token sesudahnya dan test_komentar_blok_tidak_ditutup_error.
+
+**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
+memverifikasinya?
+Ya membantu memperbaiki, kami menjalankan test_tambahan.py untuk melihat jika semua test tercapai maka terverifikasi.
 ---
