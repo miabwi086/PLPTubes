@@ -77,7 +77,7 @@ parser sempat berjalan dengan menampilakn pesan `LexError: Baris L, kolom K: kom
 **Reproduksi minimal.** SQL terpendek yang memicu bug:
 
 ```sql
-/* dokumentasi */ SELECT 1;
+/* x */ SELECT 1;
 ```
 
 **Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
@@ -90,16 +90,15 @@ alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
 Kami mengubah file crud/lexer.py, method Lexer._scan_token(), cabang
 if ch == "/" and self._peek() == "*": Agar setelah mendeteksi "/*" masuk ke While loop memeriksa sampai EOF, sehingga komentar yang tidak ditutup melempar LexError di posisi /*
 
-**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus sesudahnya.
-tests/test_tambahan.py::test_komentar_blok_didukung, gagal sebelum
-perbaikan (melempar LexError), lulus sesudahnya. Ditambahkan juga coverage
-test_komentar_blok_lintas_baris untuk memastikan line tetap akurat untuk
-token sesudahnya dan test_komentar_blok_tidak_ditutup_error.
+**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus sesudahnya. \
+test_komentar_blok_didukung \
+test_komentar_blok_lintas_baris \
+test_komentar_blok_tidak_ditutup_error
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
-memverifikasinya?
-Ya membantu memperbaiki, kami menjalankan test_tambahan.py untuk melihat jika semua test tercapai maka terverifikasi.
----
+memverifikasinya? /
+Kami menemukan bug saat melakukan pytest, AI membantu pada memperbaiki code dan alternatif coda yang bisa menjadi opsi, kami menjalankan test_tambahan.py untuk menguji kembali dan hasilnya sukses melewati test.
+
 
 
 ## Bug 3: <> dipecah jadi < dan >
@@ -130,4 +129,47 @@ test_operator_tidak_sama_satu_token
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
-I membantu menunjuk lokasi bug dan mengusulkan perbaikan tiga cabang. Kami mengetik perbaikan sendiri dan memverifikasi dengan `python -m pytest`: pesan error `'>'` di baris 6 hilang dan tes regresi hijau.
+AI membantu menunjuk lokasi bug dan mengusulkan perbaikan tiga cabang. Kami mengetik perbaikan sendiri dan memverifikasi dengan `python -m pytest`: pesan error `'>'` di baris 6 hilang dan tes regresi hijau.
+
+
+
+## Bug 4: `INSERT ... SELECT` (TODO T1)
+
+**Ditemukan oleh:** Fatih · **Diperbaiki oleh:** Fatih
+
+**Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md (sebutkan bagiannya). /
+Test bawaan `tests/test_analyzer.py::test_matrix_laporan_penjualan` /
+gagal dengan:
+
+```error
+assert (None is None and [ParseError("...an 'SELECT'")] == [] /
++  where None = FileResult(statements=[StatementResult(line=3, kind='SELECT', tables={'pelanggan': 'R', 'pesanan': 'R'}, columns={('pe...ParseError("Baris 10, kolom 1: INSERT ... SELECT belum didukung, ditemukan 'SELECT'")], diagnostics=[], lex_error=None).lex_error
+```
+
+File `data/sample/laporan_penjualan.sql` pada baris ke-10 memuat
+`INSERT INTO ... SELECT ...`. Parser menolak, membuat seluruh
+statement setelahnya tidak pernah dianalisis dan CRUD matrix file tersebut tidak lengkap.
+
+**Reproduksi minimal.** SQL terpendek yang memicu bug:
+
+```sql
+INSERT INTO t (a) SELECT b FROM s;
+```
+
+**Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
+Karena belum ada implementasi, konsep yang belum diimplementasi adalah recursive descent pada Crafting Interpreters Bab 6 6.2, di sini aturan insert_stmt punya dua alternatif(VALUES dan SELECT). /
+Tetapi method _insert() hanya menerjemahkan alternatif pertama dan melempar error untuk alternatif kedua, sedagnakn method _select() yang dibutuhkan untuk cabang kedua tersedia dan bisa dipanggil.
+
+**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
+alternatif yang kalian pertimbangkan dan alasan tidak memilihnya. /
+Mengubah `parser.py`, pada method `Parser._insert()`, diganti dengan pemanggilan `self._select()` yang sudah ada. Method mereturn `ast.Select` berisi seluruh sumber, join, where, dan subquery yang sudah di-*parse*, lalu hasilnya dibungkus menjadi `ast.Insert(table, columns, [], query, line=start.line)`, `values` dikosongkan karena bentuk ini tidak punya baris `VALUES`. /
+Tidak ada perubahan pada `ast_nodes.py` ataupun di `analyzer.py` (`analyze_statement()` sudah memeriksa `stmt.query is not None` dan menandai tabel di dalamnya `R`, sesuai SPESIFIKASI 5). /
+Alternatif yang ditolak: menambah field AST baru untuk membedakan `VALUES` vs `SELECT` (mengubah API publik 7 tanpa manfaat), dan mem-*parse* `SELECT` manual di dalam `_insert` (menduplikasi `_select()` dan menyimpang dari pola *recursive descent* Bab 6).
+
+**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus sesudahnya. /
+test_insert_select_didukung /
+test_insert_select_matrix_target_c_sumber_r
+
+**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
+memverifikasinya?
+AI hanya membantu pada memperbaiki bug. Lokasi ditemukan sendiri dari traceback `test_matrix_laporan_penjualan` di pytest, dan kami memperbaiki dengan merujuk SPESIFIKASI.md 3 dan 5 serta *Crafting Interpreters* Bab 6 6.2. AI merekomendasikan alternatif tapi kami tolak. Verifikasi dengan `python -m pytest`: `test_matrix_laporan_penjualan` passed dan dua test regresi.

@@ -7,6 +7,8 @@ Isi dengan:
 """
 import pytest;
 
+from crud.parser import parse_sql
+from crud.pipeline import analyze_source
 from crud.lexer import LexError, TokenType as T, tokenize
 
 def test_keyword_campuran_huruf_dinormalisasi_besar():
@@ -68,3 +70,16 @@ def test_operator_tidak_sama_satu_token():
     toks = tokenize("a <> b")
     assert [t.value for t in toks[:3]] == ["a", "<>", "b"]
     assert toks[1].type == T.OP
+
+def test_insert_select_didukung():
+    # Regresi Bug 2 (TODO T1): INSERT ... SELECT harus di-parse (SPESIFIKASI 3)
+    script = parse_sql("INSERT INTO t (a) SELECT b FROM s;")
+    assert script.errors == []
+    assert len(script.statements) == 1
+
+
+def test_insert_select_matrix_target_c_sumber_r():
+    # Regresi Bug 2 (TODO T1): CRUD matrix INSERT ... SELECT (SPESIFIKASI 5)
+    res = analyze_source("INSERT INTO t (a) SELECT b FROM s;")
+    assert res.parse_errors == []
+    assert res.matrix() == {"t": "C", "s": "R"}
