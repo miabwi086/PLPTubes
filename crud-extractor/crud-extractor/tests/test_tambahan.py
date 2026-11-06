@@ -62,3 +62,9 @@ def test_komentar_baris_tetap_works():
     toks = tokenize("-- ini komentar\nSELECT 1;")
     assert toks[0].type is T.KEYWORD
     assert toks[0].line == 2
+
+def test_operator_tidak_sama_satu_token():
+    # Regresi Bug 3: '<>' harus satu token OP (maximal munch, SPESIFIKASI 2.5)
+    toks = tokenize("a <> b")
+    assert [t.value for t in toks[:3]] == ["a", "<>", "b"]
+    assert toks[1].type == T.OP

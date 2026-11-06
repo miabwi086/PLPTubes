@@ -100,3 +100,34 @@ token sesudahnya dan test_komentar_blok_tidak_ditutup_error.
 memverifikasinya?
 Ya membantu memperbaiki, kami menjalankan test_tambahan.py untuk melihat jika semua test tercapai maka terverifikasi.
 ---
+
+
+## Bug 3: <> dipecah jadi < dan >
+
+**Ditemukan oleh:** Fadhil  · **Diperbaiki oleh:** Fadhil
+
+**Gejala.** inputnya dari yang Baris 6, kolom 41 di laporan_penjualan.sql. yang mana di situ menggunakan token '<>' tapi kebaca nya malah '<' sama '>' padahal di spesifikasi.md baigian 2.5 disebutkan Lexer selalu mengambil operator **terpanjang** yang cocok (maximal munch): `<>` adalah satu token, bukan `<` lalu `>`.
+
+**Reproduksi minimal.** SQL terpendek yang memicu bug:
+
+```sql
+a <> b
+```
+
+**Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
+masalahnya karena lexer hanya membaca '<' kemudian cek setelah nya '=' bukan? setelah tahu bukan, di tidak ngecek apakah setelah nya '>' atau bukan? hal ini melanggar konsep maximal munch yang menyatakan bahwa bila beberapa aturan leksikal cocok, aturan yang mencocokkan karakter terbanyak menang, sehingga `<>` (2 karakter) harus mengalahkan `<` (1 karakter). Kode lama melanggarnya. Lexer tidak menganggap ini salah karena `<` dan `>` masing-masing token yang sah. Kesalahan baru terlihat di parser, yang tidak menerima `>` berdiri sendiri di awal ekspresi. Jadi akarnya di lexer tetapi gejalanya muncul di tahap berikutnya.
+
+**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
+alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
+perbaikan nya tambahkan pengecekan '>' setelah muncul setelah pengecekan '='. 
+Alternatif yang dipertimbangkan: membuat tabel operator dua karakter dan mencocokkan dari
+yang terpanjang. Tidak dipilih karena perubahan lebih besar dan gaya kode yang ada sudah
+memakai `_match` untuk operator lain (`>=`, `!=`). 
+
+**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus
+sesudahnya.
+test_operator_tidak_sama_satu_token
+
+**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
+memverifikasinya?
+I membantu menunjuk lokasi bug dan mengusulkan perbaikan tiga cabang. Kami mengetik perbaikan sendiri dan memverifikasi dengan `python -m pytest`: pesan error `'>'` di baris 6 hilang dan tes regresi hijau.
