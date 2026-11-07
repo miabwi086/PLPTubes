@@ -190,7 +190,7 @@ UPDATE pelanggan SET level = 'gold' WHERE id IN (SELECT pelanggan_id FROM pesana
 ```
 
 **Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
-Analyzer mengumpulkan operasi per tabel dengan menelusuri AST. Untuk UPDATE, subquery di SET dan WHERE ikut diteruskan dengan operasi "U", padahal subquery hanya membaca tabel. Aturan proyek (SPESIFIKASI §5) menyatakan membaca tabel lewat subquery selalu R apa pun jenis statement luarnya. Jadi operasi yang diwariskan dari statement luar ke subquery salah: operasi tabel target tidak boleh “menular” ke tabel lain di dalam subquery.
+Analyzer mengumpulkan operasi per tabel dengan menelusuri AST. Untuk UPDATE, subquery di SET dan WHERE ikut diteruskan dengan operasi "U", padahal subquery hanya membaca tabel. Aturan proyek (SPESIFIKASI 5) menyatakan membaca tabel lewat subquery selalu R apa pun jenis statement luarnya. Jadi operasi yang diwariskan dari statement luar ke subquery salah: operasi tabel target tidak boleh “menular” ke tabel lain di dalam subquery.
 
 **Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
 alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
@@ -256,7 +256,7 @@ Kami menemukannya saat melakukan pytest dan AI membantu memperbaiki bugnya. Perb
 **Ditemukan oleh:** Fadhil · **Diperbaiki oleh:** Fadhil
  
 **Gejala.** Input `'O''Brien'` menghasilkan dua token `STRING` (`O` dan `Brien`), padahal
-SPESIFIKASI §2.4 menyatakan dua kutip berturut-turut di dalam string mewakili satu karakter
+SPESIFIKASI 2.4 menyatakan dua kutip berturut-turut di dalam string mewakili satu karakter
 kutip, sehingga hasil yang diharapkan satu token `STRING` bernilai `O'Brien`. Dampaknya parser
 melihat dua string berurutan, menolak statement `UPDATE ... SET nama = 'O''Neil'`, lalu panic
 mode membuang sisanya. Di `data/sample/pemeliharaan.sql` ini membuat baris 8 (`UPDATE`) hilang
@@ -304,7 +304,7 @@ dan memverifikasi dengan perintah `tokenize` untuk `'O'Brien'` (hasil 2 = satu `
  
 **Gejala.** `select ... from crm.pelanggan c left outer join crm.alamat a on ...`
 (`pemeliharaan.sql` baris 5) ditolak dengan pesan `diharapkan JOIN, ditemukan 'OUTER'`.
-SPESIFIKASI §3 menulis grammar join sebagai `"LEFT" [ "OUTER" ] "JOIN"`, jadi `OUTER` opsional
+SPESIFIKASI 3 menulis grammar join sebagai `"LEFT" [ "OUTER" ] "JOIN"`, jadi `OUTER` opsional
 dan input itu valid. Karena statement ditolak, `SELECT` di baris 3 tidak masuk hasil
 (FN `('pemeliharaan.sql', 3, 'crm.pelanggan', 'R')` dan `crm.alamat`), dan panic mode
 menyebabkan statement sesudahnya ikut terpengaruh.
@@ -334,7 +334,7 @@ menggandakan kode.
 **Test regresi.** `test_left_outer_join_diterima` di `tests/test_tambahan.py`. Gagal sebelum
 perbaikan (ada error parse), lulus sesudahnya.
  
-**Peran AI.** AI menemukan bug ini saat mencocokkan label `ground_truth.csv` dengan grammar §3
+**Peran AI.** AI menemukan bug ini saat mencocokkan label `ground_truth.csv` dengan grammar 3
 dan menunjuk `_join` serta baris yang perlu ditambah. Kami mengetik perubahan sendiri dan
 memverifikasi dengan `python evaluate.py` (parser Precision 1.00, Recall 1.00) dan
 `python -m pytest`.

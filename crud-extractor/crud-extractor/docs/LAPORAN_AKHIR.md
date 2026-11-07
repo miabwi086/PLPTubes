@@ -3,7 +3,7 @@
 ## 1. Hasil evaluasi
 
 Keluaran `python evaluate.py` setelah `data/ground_truth.csv` dilengkapi (27 triple, 4 file).
-Label `audit.sql` dan `pemeliharaan.sql` dibuat manual dari SPESIFIKASI §5 dan §8, bukan disalin
+Label `audit.sql` dan `pemeliharaan.sql` dibuat manual dari SPESIFIKASI 5 dan 8, bukan disalin
 dari keluaran tool.
 
 ```text
@@ -65,7 +65,7 @@ WHERE o.status = 'LUNAS' AND o.catatan <> 'FROM rahasia'
 
 Pola `FROM <nama>` pada regex cocok dengan isi string, sehingga `rahasia` dilaporkan sebagai tabel
 yang dibaca (`rahasia, R`). Tabel itu tidak ada. Lexer membaca `'FROM rahasia'` sebagai satu token
-`STRING` utuh (SPESIFIKASI §2.4), jadi `FROM` di dalamnya hanyalah isi teks, bukan keyword. Ini
+`STRING` utuh (SPESIFIKASI 2.4), jadi `FROM` di dalamnya hanyalah isi teks, bukan keyword. Ini
 inti pemisahan lexing dari parsing: keputusan "ini keyword atau data" dibuat sekali di lexer,
 lewat aturan bahwa isi string dibaca sampai kutip penutup. Regex tidak punya konsep token.
 
@@ -87,7 +87,7 @@ sebagai AST.
 Kasus lain yang terlihat di keluaran dan menguatkan poin yang sama: pada `campuran_error.sql`
 baris 4 (`SELECT id nama, FROM pesanan` yang rusak) regex tetap melaporkan `pesanan, R`,
 sedangkan parser menolak statement itu lewat panic mode dan tidak menghitungnya (SPESIFIKASI
-§5 dan §6).
+5 dan 6).
 
 ## 3. Batas pendekatan kami
 
@@ -97,13 +97,13 @@ kode kami dan hasilnya dicantumkan.
 1. **Tanpa skema database, kolom tanpa qualifier tidak bisa dikaitkan ke tabel bila ada lebih
    dari satu tabel.**
    `SELECT nama FROM pelanggan p, pesanan o`: kolom `nama` bisa milik `pelanggan` atau
-   `pesanan`. Sesuai SPESIFIKASI §4.3 resolver memberi peringatan "ambigu" dan `resolved` tetap
+   `pesanan`. Sesuai SPESIFIKASI 4.3 resolver memberi peringatan "ambigu" dan `resolved` tetap
    `None`. Akibatnya: matriks CRUD tingkat tabel tetap benar (keduanya `R`), tetapi informasi
    tingkat kolom (`columns`) tidak lengkap, jadi tool tidak bisa menjawab "kolom mana milik
    tabel mana". Informasi yang dibutuhkan: definisi kolom setiap tabel (DDL atau katalog
    database).
 2. **Konstruksi di luar grammar: `WITH`, `UNION`, `MERGE`, dan pemanggilan prosedur
-   (SPESIFIKASI §9).** Kami menjalankan beberapa contoh, dan hasilnya selalu error parse
+   (SPESIFIKASI 9).** Kami menjalankan beberapa contoh, dan hasilnya selalu error parse
    sehingga seluruh statement tidak masuk matriks:
    `WITH t AS (SELECT id FROM pesanan) SELECT id FROM t` ditolak di kata `WITH`;
    `SELECT id FROM a UNION SELECT id FROM b` ditolak di `UNION` (kolom 24);
