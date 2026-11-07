@@ -137,9 +137,7 @@ kerja dan log AI):
 - **Fatih:** Bug 2 (komentar blok, TODO T3), Bug 4 (`INSERT ... SELECT`, TODO T1), dan Bug 6
   (resolusi kolom tanpa qualifier, TODO T2).
 
-Cara memastikan keduanya paham seluruh kode: [ISI DENGAN YANG BENAR-BENAR DILAKUKAN. Contoh yang
-sesuai riwayat: sebelum bergantian Driver, Navigator menjelaskan ulang bug yang baru
-diperbaiki (misalnya Bug 2 dijelaskan ke Fadhil sebelum giliran Fadhil mengetik); setiap
-selesai satu bug kami menjalankan `python -m pytest` bersama, dan 44 tes lulus di akhir.
-Tambahkan hanya latihan demo lisan atau penelusuran pipeline tanpa melihat kode kalau memang
-sudah dilakukan.]
+Cara memastikan keduanya paham seluruh kode:  
+pada setiap sesi, satu orang menjadi Driver yang mengetik perubahan dan satu orang menjadi Navigator yang membaca kode serta memeriksa usulan perbaikan. Peran ini mengikuti siapa yang memperbaiki bug: ketika Fadhil memperbaiki Bug 1, 3, 5, 7, atau 8, Fatih menjadi Navigator; ketika Fatih memperbaiki Bug 2, 4, atau 6, Fadhil menjadiNavigator.  
+
+Sebelum pergantian Driver, Navigator menjelaskan ulang akar masalah bug yang baru diperbaiki ke pasangannya, sehingga kedua anggota mendengar penjelasan yang sama untuk bug yang sama, bukan hanya yang dikerjakan masing-masing. Setiap selesai satu bug, kedua anggota menjalankan `python -m pytest` bersama; di akhir seluruh perbaikan, 44 tes lulus. Verifikasi terakhir dilakukan dengan menjalankan `python -m crud.cli data/sample/audit.sql --ast` dan `python evaluate.py` bersama untuk memastikan hasil di tingkat pipeline (bukan hanya test unit) juga sesuai SPESIFIKASI.
