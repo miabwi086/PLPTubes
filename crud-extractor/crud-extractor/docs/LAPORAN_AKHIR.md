@@ -131,11 +131,11 @@ bergantian sekitar tiap 30 menit. Pada praktiknya pekerjaan terbagi berikut (ses
 kerja dan log AI):
 
 - **Fadhil:** Bug 1 (keyword huruf kecil), Bug 3 (`<>` terpecah di lexer), Bug 5 (subquery
-  `UPDATE` bertanda `U`), perbaikan `''` di string, `_synchronize` (panic mode), `LEFT OUTER
-  JOIN`, [ISI: bug resolver/presedensi bila Fadhil yang mengetik], serta pelabelan
-  `ground_truth.csv`.
-- **[NAMA TEMAN]:** Bug 2 (komentar blok), `INSERT ... SELECT`, resolusi kolom tanpa
-  qualifier (`TODO(T2)`), [ISI bila ada tambahan].
+  `UPDATE` bertanda `U`), Bug 7 (`''` di dalam string terbaca dua token), Bug 8 (`LEFT OUTER
+  JOIN` ditolak parser), `_synchronize` (panic mode), serta pelabelan `ground_truth.csv`.
+
+- **Fatih:** Bug 2 (komentar blok, TODO T3), Bug 4 (`INSERT ... SELECT`, TODO T1), dan Bug 6
+  (resolusi kolom tanpa qualifier, TODO T2).
 
 Cara memastikan keduanya paham seluruh kode: [ISI DENGAN YANG BENAR-BENAR DILAKUKAN. Contoh yang
 sesuai riwayat: sebelum bergantian Driver, Navigator menjelaskan ulang bug yang baru
