@@ -31,4 +31,5 @@ Catat setiap penggunaan AI atau coding agent yang memengaruhi kode atau laporan.
 | 25 | Fatih | Minta rujukan pasal spesifikasi dan bab buku | Diubah: AI usul Bab 11 11.3.3; nomor bagian kami cocokkan sendiri dengan daftar isi buku | Buku hasil ekstraksi PDF bisa salah nomor bagian | Buka daftar isi *Crafting Interpreters*, cocokkan dengan kutipan di `LAPORAN_BUG.md` |
 
 **Refleksi (3-5 kalimat).** Di bagian mana AI paling membantu? Di mana AI keliru atau
-menyesatkan, dan bagaimana kalian mengetahuinya?
+menyesatkan, dan bagaimana kalian mengetahuinya?  
+AI paling membantu saat menunjukkan lokasi bug dan mengusulkan opsi perbaikan, terutama pada bug 3 dan bug 5. Pada bug 5, AI menjalankan statement `UPDATE` kecil di salinan sementara untuk membuktikan sumber bug dan menunjuk `analyzer.py` baris 19-23. AI keliru saat mengira `tests/test_tambahan.py` sudah punya import pada bug 1, dan kesalahan itu baru terlihat dari error pytest. Kami juga menolak beberapa rekomendasi AI, seperti menambah field AST baru untuk `INSERT ... SELECT` pada bug 4 dan memakai `_lookup()` pada bug 6, karena melanggar batas desain di `SPESIFIKASI.md`. Verifikasi lewat pytest dan pembacaan spesifikasi membuat kami bisa memisahkan saran yang berguna dari yang menyesatkan.
