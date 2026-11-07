@@ -83,3 +83,13 @@ def test_insert_select_matrix_target_c_sumber_r():
     res = analyze_source("INSERT INTO t (a) SELECT b FROM s;")
     assert res.parse_errors == []
     assert res.matrix() == {"t": "C", "s": "R"}
+
+def test_subquery_di_update_adalah_read():
+    # Regresi Bug 5: tabel di subquery UPDATE harus R, bukan U (SPESIFIKASI 5)
+    from crud.parser import parse_sql
+    from crud.analyzer import analyze_statement
+    stmt = parse_sql(
+        "UPDATE pelanggan SET level = 'gold' "
+        "WHERE id IN (SELECT pelanggan_id FROM pesanan)"
+    ).statements[0]
+    assert analyze_statement(stmt) == {"pelanggan": {"U"}, "pesanan": {"R"}}

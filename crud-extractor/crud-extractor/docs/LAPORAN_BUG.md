@@ -173,3 +173,33 @@ test_insert_select_matrix_target_c_sumber_r
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
 AI hanya membantu pada memperbaiki bug. Lokasi ditemukan sendiri dari traceback `test_matrix_laporan_penjualan` di pytest, dan kami memperbaiki dengan merujuk SPESIFIKASI.md 3 dan 5 serta *Crafting Interpreters* Bab 6 6.2. AI merekomendasikan alternatif tapi kami tolak. Verifikasi dengan `python -m pytest`: `test_matrix_laporan_penjualan` passed dan dua test regresi.
+
+## Bug 5: subquery di UPDATE ditandai U, seharusnya R
+
+**Ditemukan oleh:** Fadhil  · **Diperbaiki oleh:** Fadhil
+
+**Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md
+(sebutkan bagiannya).
+Pada laporan_penjualan.sql , tabel pesanan menghasilkan operasi`RUD`, padahal seharusnya `RD`. Penyebabnya statement `UPDATE ... WHERE id IN (SELECT ... FROM pesanan ...)` menandai pesanan sebagai `U`. Menurut SPESIFIKASI bagian 5, tabel yang dibaca lewat subquery selalu `R`, apa pun jenis statement luarnya.
+
+**Reproduksi minimal.** SQL terpendek yang memicu bug:
+
+```sql
+UPDATE pelanggan SET level = 'gold' WHERE id IN (SELECT pelanggan_id FROM pesanan)
+```
+
+**Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
+Analyzer mengumpulkan operasi per tabel dengan menelusuri AST. Untuk UPDATE, subquery di SET dan WHERE ikut diteruskan dengan operasi "U", padahal subquery hanya membaca tabel. Aturan proyek (SPESIFIKASI §5) menyatakan membaca tabel lewat subquery selalu R apa pun jenis statement luarnya. Jadi operasi yang diwariskan dari statement luar ke subquery salah: operasi tabel target tidak boleh “menular” ke tabel lain di dalam subquery.
+
+**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
+alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
+fungsi `analyze_statement`, cabang `ast.Update`. Dua pemanggilan `_collect` untuk `SET` dan `WHERE` diubah dari `"U"` menjadi `"R"`. Baris yang menandai tabel target (`add("U")`) tidak diubah. Alternatif yang dipertimbangkan: menghapus
+parameter operasi di `_collect` karena subquery di ekspresi selalu `R`. Tidak dipilih karena perubahannya lebih besar dan cabang `Insert` dan `Delete` sudah memakai pola yang sama dengan parameter `"R"`.
+
+**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus
+sesudahnya.
+test_subquery_di_update_adalah_read
+
+**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
+memverifikasinya?
+AI menjalankan statement `UPDATE` kecil di salinan sementara untuk membuktikan sumber bug, menunjuk `analyzer.py` baris 19-23 sebagai lokasi, dan mengusulkan penggantian `"U"` menjadi `"R"`. Kami mengetik perbaikan sendiri dan memverifikasi dengan `python -m pytest`
