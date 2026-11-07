@@ -249,3 +249,92 @@ test_kolom_tanpa_qualifier_dua_tabel_ambigu
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?  
 Kami menemukannya saat melakukan pytest dan AI membantu memperbaiki bugnya. Perbaikan yang diambil adalah membaca self.scope.entries langsung sesuai pasal tersebut. Verifikasi dengan `python -m pytest: test_kolom_tanpa_qualifier_satu_tabel` lulus, dua tes regresi hijau, dan seluruh suite tetap hijau. 
+
+
+## Bug 7: `''` di dalam string terbaca sebagai dua token STRING
+ 
+**Ditemukan oleh:** Fadhil · **Diperbaiki oleh:** Fadhil
+ 
+**Gejala.** Input `'O''Brien'` menghasilkan dua token `STRING` (`O` dan `Brien`), padahal
+SPESIFIKASI §2.4 menyatakan dua kutip berturut-turut di dalam string mewakili satu karakter
+kutip, sehingga hasil yang diharapkan satu token `STRING` bernilai `O'Brien`. Dampaknya parser
+melihat dua string berurutan, menolak statement `UPDATE ... SET nama = 'O''Neil'`, lalu panic
+mode membuang sisanya. Di `data/sample/pemeliharaan.sql` ini membuat baris 8 (`UPDATE`) hilang
+dari hasil. Bug ini tidak tertangkap tes lokal mana pun; ketahuan dari `python evaluate.py`
+(FN `('pemeliharaan.sql', 8, 'crm.pelanggan', 'U')`).
+ 
+**Reproduksi minimal.** SQL terpendek yang memicu bug:
+ 
+```sql
+SELECT 'O''Brien'
+```
+ 
+Sebelum perbaikan `tokenize` menghasilkan 2 token `STRING` (`O`, `Brien`); sesudahnya 1 token
+`STRING` bernilai `O'Brien`.
+ 
+**Akar masalah.** (tulis ulang dengan kata sendiri) Lexer membaca string karakter demi karakter
+dan berhenti pada kutip pertama yang ditemuinya. Ia tidak melihat karakter sesudah kutip itu,
+jadi tidak bisa membedakan kutip penutup dari kutip yang di-escape (`''`). Akibatnya satu
+literal terpecah menjadi dua lexeme. Konsep yang dilanggar: aturan lexing string literal dengan
+escape, di mana lexer harus mengintip satu karakter ke depan (lookahead) sebelum memutuskan
+lexeme berakhir (Crafting Interpreters bab 4, Scanning, bagian string literal). Bug ada di
+lexer, bukan parser: token yang dihasilkan sudah salah sejak awal, parser hanya menampakkan
+gejalanya.
+ 
+**Perbaikan.** `crud/lexer.py`, fungsi `_string`. Setelah menemukan kutip, kami mengintip
+karakter berikutnya dengan `self._peek()`: bila juga kutip, kami konsumsi kutip itu, menambahkan
+satu `'` ke isi string, dan lanjut membaca; bila bukan, itu kutip penutup dan loop berhenti.
+Alternatif yang dipertimbangkan: menggabungkan dua `STRING` yang berurutan di parser. Tidak
+dipilih karena parser tidak bisa membedakan `'O''Neil'` dari dua string yang memang berurutan,
+dan aturan escape adalah urusan lexeme, jadi tempatnya di lexer.
+ 
+**Test regresi.** `test_kutip_ganda_dalam_string_satu_token` di `tests/test_tambahan.py`. Gagal
+sebelum perbaikan (dua token), lulus sesudahnya.
+ 
+**Peran AI.** AI menelusuri dari output `evaluate.py` bahwa FN baris 8 berasal dari `''`, lalu
+menunjuk `_string` dan mengusulkan perbaikan intip-karakter. Kami mengetik perbaikannya sendiri
+dan memverifikasi dengan perintah `tokenize` untuk `'O'Brien'` (hasil 2 = satu `STRING` plus
+`EOF`) dan `python evaluate.py` (FN baris 8 hilang).
+ 
+---
+ 
+## Bug 8: `LEFT OUTER JOIN` ditolak parser
+ 
+**Ditemukan oleh:** Fadhil · **Diperbaiki oleh:** Fadhil
+ 
+**Gejala.** `select ... from crm.pelanggan c left outer join crm.alamat a on ...`
+(`pemeliharaan.sql` baris 5) ditolak dengan pesan `diharapkan JOIN, ditemukan 'OUTER'`.
+SPESIFIKASI §3 menulis grammar join sebagai `"LEFT" [ "OUTER" ] "JOIN"`, jadi `OUTER` opsional
+dan input itu valid. Karena statement ditolak, `SELECT` di baris 3 tidak masuk hasil
+(FN `('pemeliharaan.sql', 3, 'crm.pelanggan', 'R')` dan `crm.alamat`), dan panic mode
+menyebabkan statement sesudahnya ikut terpengaruh.
+ 
+**Reproduksi minimal.** SQL terpendek yang memicu bug:
+ 
+```sql
+SELECT a.id FROM a LEFT OUTER JOIN b ON b.id = a.id
+```
+ 
+Sebelum perbaikan: 1 error parse, 0 statement. Sesudahnya: 0 error, 1 statement.
+ 
+**Akar masalah.** (tulis ulang dengan kata sendiri) Fungsi `_join` mengonsumsi `LEFT`, lalu
+langsung menuntut `JOIN` lewat `_expect_kw`. Bagian `[ "OUTER" ]` pada grammar tidak pernah
+diterjemahkan ke kode, jadi token `OUTER` tidak dimakan dan `_expect_kw("JOIN")` gagal. Konsep:
+dalam recursive descent, bagian opsional `[...]` pada grammar harus ditulis sebagai pengecekan
+"kalau token ini ada, konsumsi, kalau tidak lanjut" (Crafting Interpreters bab 6, Parsing
+Expressions, bagian recursive descent parsing). Melupakannya membuat input yang valid menurut
+grammar ditolak (false rejection).
+ 
+**Perbaikan.** `crud/parser.py`, fungsi `_join`: menambah `self._match_kw("OUTER")` tepat setelah
+`kind = "LEFT"`. Pemanggilan `_match_kw` tidak melempar error bila `OUTER` tidak ada, sehingga
+`LEFT JOIN` biasa tetap diterima. Alternatif yang dipertimbangkan: membuat jenis join baru
+`LEFT OUTER`. Tidak dipilih karena maknanya sama dengan `LEFT` dan cabang tambahan hanya
+menggandakan kode.
+ 
+**Test regresi.** `test_left_outer_join_diterima` di `tests/test_tambahan.py`. Gagal sebelum
+perbaikan (ada error parse), lulus sesudahnya.
+ 
+**Peran AI.** AI menemukan bug ini saat mencocokkan label `ground_truth.csv` dengan grammar §3
+dan menunjuk `_join` serta baris yang perlu ditambah. Kami mengetik perubahan sendiri dan
+memverifikasi dengan `python evaluate.py` (parser Precision 1.00, Recall 1.00) dan
+`python -m pytest`.
