@@ -90,13 +90,13 @@ alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
 Kami mengubah file crud/lexer.py, method Lexer._scan_token(), cabang
 if ch == "/" and self._peek() == "*": Agar setelah mendeteksi "/*" masuk ke While loop memeriksa sampai EOF, sehingga komentar yang tidak ditutup melempar LexError di posisi /*
 
-**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus sesudahnya. \
-test_komentar_blok_didukung \
-test_komentar_blok_lintas_baris \
+**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus sesudahnya.  
+test_komentar_blok_didukung  
+test_komentar_blok_lintas_baris  
 test_komentar_blok_tidak_ditutup_error
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
-memverifikasinya? /
+memverifikasinya?  
 Kami menemukan bug saat melakukan pytest, AI membantu pada memperbaiki code dan alternatif coda yang bisa menjadi opsi, kami menjalankan test_tambahan.py untuk menguji kembali dan hasilnya sukses melewati test.
 
 
@@ -137,12 +137,12 @@ AI membantu menunjuk lokasi bug dan mengusulkan perbaikan tiga cabang. Kami meng
 
 **Ditemukan oleh:** Fatih · **Diperbaiki oleh:** Fatih
 
-**Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md (sebutkan bagiannya). /
-Test bawaan `tests/test_analyzer.py::test_matrix_laporan_penjualan` /
+**Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md (sebutkan bagiannya).  
+Test bawaan `tests/test_analyzer.py::test_matrix_laporan_penjualan`  
 gagal dengan:
 
 ```error
-assert (None is None and [ParseError("...an 'SELECT'")] == [] /
+assert (None is None and [ParseError("...an 'SELECT'")] == []  
 +  where None = FileResult(statements=[StatementResult(line=3, kind='SELECT', tables={'pelanggan': 'R', 'pesanan': 'R'}, columns={('pe...ParseError("Baris 10, kolom 1: INSERT ... SELECT belum didukung, ditemukan 'SELECT'")], diagnostics=[], lex_error=None).lex_error
 ```
 
@@ -161,13 +161,13 @@ Karena belum ada implementasi, konsep yang belum diimplementasi adalah recursive
 Tetapi method _insert() hanya menerjemahkan alternatif pertama dan melempar error untuk alternatif kedua, sedagnakn method _select() yang dibutuhkan untuk cabang kedua tersedia dan bisa dipanggil.
 
 **Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
-alternatif yang kalian pertimbangkan dan alasan tidak memilihnya. /
-Mengubah `parser.py`, pada method `Parser._insert()`, diganti dengan pemanggilan `self._select()` yang sudah ada. Method mereturn `ast.Select` berisi seluruh sumber, join, where, dan subquery yang sudah di-*parse*, lalu hasilnya dibungkus menjadi `ast.Insert(table, columns, [], query, line=start.line)`, `values` dikosongkan karena bentuk ini tidak punya baris `VALUES`. /
-Tidak ada perubahan pada `ast_nodes.py` ataupun di `analyzer.py` (`analyze_statement()` sudah memeriksa `stmt.query is not None` dan menandai tabel di dalamnya `R`, sesuai SPESIFIKASI 5). /
+alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.  
+Mengubah `parser.py`, pada method `Parser._insert()`, diganti dengan pemanggilan `self._select()` yang sudah ada. Method mereturn `ast.Select` berisi seluruh sumber, join, where, dan subquery yang sudah di-*parse*, lalu hasilnya dibungkus menjadi `ast.Insert(table, columns, [], query, line=start.line)`, `values` dikosongkan karena bentuk ini tidak punya baris `VALUES`.  
+Tidak ada perubahan pada `ast_nodes.py` ataupun di `analyzer.py` (`analyze_statement()` sudah memeriksa `stmt.query is not None` dan menandai tabel di dalamnya `R`, sesuai SPESIFIKASI 5).  
 Alternatif yang ditolak: menambah field AST baru untuk membedakan `VALUES` vs `SELECT` (mengubah API publik 7 tanpa manfaat), dan mem-*parse* `SELECT` manual di dalam `_insert` (menduplikasi `_select()` dan menyimpang dari pola *recursive descent* Bab 6).
 
-**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus sesudahnya. /
-test_insert_select_didukung /
+**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus sesudahnya.  
+test_insert_select_didukung  
 test_insert_select_matrix_target_c_sumber_r
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
@@ -203,3 +203,46 @@ test_subquery_di_update_adalah_read
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
 AI menjalankan statement `UPDATE` kecil di salinan sementara untuk membuktikan sumber bug, menunjuk `analyzer.py` baris 19-23 sebagai lokasi, dan mengusulkan penggantian `"U"` menjadi `"R"`. Kami mengetik perbaikan sendiri dan memverifikasi dengan `python -m pytest`
+
+
+## Bug 6: (judul singkat)
+
+**Ditemukan oleh:** Fatih · **Diperbaiki oleh:** Fatih
+
+**Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md
+(sebutkan bagiannya).  
+Test bawaan `tests/test_resolver.py::test_kolom_tanpa_qualifier_satu_tabel`  
+gagal dengan:
+
+```
+AssertionError: assert {'arsip_pesan...sanan': 'RUD'} == {'arsip_pesan...esanan': 'RD'}  
+
+    Omitting 2 identical items, use -vv to show
+    Differing items:
+    {'pesanan': 'RUD'} != {'pesanan': 'RD'}
+```
+
+Query `SELECT nama FROM pelanggan WHERE aktif = 1` punya satu tabel pada scope terdalam (`pelanggan`), sehingga menurut SPESIFIKASI.md 4.3 kolom `nama` dan `aktif` harus di-resolve ke `"pelanggan"`. Nyatanya `ColumnRef.resolved` tetap `None` untuk keduanya.
+>>>>>>> bb8bdd8 (Bug 6: Kolom tanpa qualifier tidak di-resolve TODO (T2))
+=======
+SELECT nama FROM pelanggan
+```
+
+**Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
+Kode masuk error pada pytest karena belum diimplementasikan, setelah kode yang memenuhi TODO (T2) dibuat, baru passed. Konsep yang belum diterapkan adalah pola resolver yang dinyatakan di Crafting Interpreters Bab 11 11.3.3 (Resolving variable expressions).  
+Untuk kolom tanpa qualifier, pola yang sama berlaku, resolver harus memeriksa scope terdalam terlebih dahulu, lalu memutuskan berdasarkan isi scope tersebut, bukan melompatinya.
+
+**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
+alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.  
+Perbaikan ada di `resolver.py`, method `Resolver._column()`, cabang `col.qualifier is None`. Awalnya yang berisi `pass` diganti dengan langsung membaca `self.scope.entries`, bukan `_lookup(...)`. Ini karena SPESIFIKASI.md 4.3 membatasi pandangan kolom tanpa qualifier pada scope terdalam saja. Tiga kasus ditangani: nol entri → warning, `resolved` tetap `None`; lebih dari satu → warning `kolom '<nama>' ambigu tanpa skema`, `resolved` tetap `None`; tepat satu → `col.resolved = _target_of(entries[0])`. Hasilnya, `SELECT nama FROM pelanggan` menghasilkan `resolved = "pelanggan"`, sedangkan `SELECT nama FROM pelanggan, pesanan` menghasilkan `None` plus warning, sesuai pasal yang sama.
+
+Tiga alternatif ditolak. Memakai `_lookup(col.name)` ditolak karena menelusuri scope ke luar, melanggar 4.3 yang hanya mengizinkan scope terdalam. Mengisi `resolved` dengan string kosong saat ambigu ditolak karena 4.3 menyatakan tetap `None`, dan `analyzer.py` sudah memanfaatkan `None` itu. Melempar exception saat ambigu ditolak karena 4.3 menyatakan kasus itu warning, bukan error — exception akan menghentikan pipeline untuk query yang sintaksnya sah.
+
+**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus
+sesudahnya.  
+test_kolom_tanpa_qualifier_satu_tabel_resolve  
+test_kolom_tanpa_qualifier_dua_tabel_ambigu
+
+**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
+memverifikasinya?  
+Kami menemukannya saat melakukan pytest dan AI membantu memperbaiki bugnya. Perbaikan yang diambil adalah membaca self.scope.entries langsung sesuai pasal tersebut. Verifikasi dengan `python -m pytest: test_kolom_tanpa_qualifier_satu_tabel` lulus, dua tes regresi hijau, dan seluruh suite tetap hijau. 

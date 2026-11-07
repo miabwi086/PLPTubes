@@ -7,8 +7,10 @@ Isi dengan:
 """
 import pytest;
 
-from crud.parser import parse_sql
+from crud.parser import parse_sql 
+from crud.resolver import Resolver
 from crud.pipeline import analyze_source
+from crud.analyzer import analyze_statement
 from crud.lexer import LexError, TokenType as T, tokenize
 
 def test_keyword_campuran_huruf_dinormalisasi_besar():
@@ -86,10 +88,24 @@ def test_insert_select_matrix_target_c_sumber_r():
 
 def test_subquery_di_update_adalah_read():
     # Regresi Bug 5: tabel di subquery UPDATE harus R, bukan U (SPESIFIKASI 5)
-    from crud.parser import parse_sql
-    from crud.analyzer import analyze_statement
     stmt = parse_sql(
         "UPDATE pelanggan SET level = 'gold' "
         "WHERE id IN (SELECT pelanggan_id FROM pesanan)"
     ).statements[0]
     assert analyze_statement(stmt) == {"pelanggan": {"U"}, "pesanan": {"R"}}
+
+def test_kolom_tanpa_qualifier_satu_tabel_resolve():
+    # Regresi Bug 2 (TODO T2): kolom tanpa qualifier dengan 1 tabel (SPESIFIKASI 4.3)
+    script = parse_sql("SELECT nama FROM pelanggan")
+    Resolver().resolve_script(script)
+    col = script.statements[0].columns[0].expr
+    assert col.resolved == "pelanggan"
+
+
+def test_kolom_tanpa_qualifier_dua_tabel_ambigu():
+    # Coverage: 2 tabel di scope -> warning ambigu, resolved None (SPESIFIKASI 4.3)
+    script = parse_sql("SELECT nama FROM pelanggan, pesanan")
+    diags = Resolver().resolve_script(script)
+    col = script.statements[0].columns[0].expr
+    assert col.resolved is None
+    assert any("ambigu tanpa skema" in d.message for d in diags)
