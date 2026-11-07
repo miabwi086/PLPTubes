@@ -174,6 +174,7 @@ test_insert_select_matrix_target_c_sumber_r
 memverifikasinya?
 AI hanya membantu pada memperbaiki bug. Lokasi ditemukan sendiri dari traceback `test_matrix_laporan_penjualan` di pytest, dan kami memperbaiki dengan merujuk SPESIFIKASI.md 3 dan 5 serta *Crafting Interpreters* Bab 6 6.2. AI merekomendasikan alternatif tapi kami tolak. Verifikasi dengan `python -m pytest`: `test_matrix_laporan_penjualan` passed dan dua test regresi.
 
+
 ## Bug 5: subquery di UPDATE ditandai U, seharusnya R
 
 **Ditemukan oleh:** Fadhil  · **Diperbaiki oleh:** Fadhil
@@ -205,7 +206,7 @@ memverifikasinya?
 AI menjalankan statement `UPDATE` kecil di salinan sementara untuk membuktikan sumber bug, menunjuk `analyzer.py` baris 19-23 sebagai lokasi, dan mengusulkan penggantian `"U"` menjadi `"R"`. Kami mengetik perbaikan sendiri dan memverifikasi dengan `python -m pytest`
 
 
-## Bug 6: (judul singkat)
+## Bug 6: Kolom tanpa qualifier tidak di-resolve (TODO T2)
 
 **Ditemukan oleh:** Fatih · **Diperbaiki oleh:** Fatih
 
@@ -223,8 +224,10 @@ AssertionError: assert {'arsip_pesan...sanan': 'RUD'} == {'arsip_pesan...esanan'
 ```
 
 Query `SELECT nama FROM pelanggan WHERE aktif = 1` punya satu tabel pada scope terdalam (`pelanggan`), sehingga menurut SPESIFIKASI.md 4.3 kolom `nama` dan `aktif` harus di-resolve ke `"pelanggan"`. Nyatanya `ColumnRef.resolved` tetap `None` untuk keduanya.
->>>>>>> bb8bdd8 (Bug 6: Kolom tanpa qualifier tidak di-resolve TODO (T2))
-=======
+
+**Reproduksi minimal.** SQL terpendek yang memicu bug:
+
+```sql
 SELECT nama FROM pelanggan
 ```
 
